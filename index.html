@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>João Pedro Belmiro — Vision AI</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #13131c;
+      --border:    #1f1f30;
+      --accent:    #7c6aff;
+      --accent2:   #ff6af0;
+      --text:      #e8e6ff;
+      --muted:     #6b6990;
+      --success:   #4fffb0;
+      --radius:    14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Gradient orbs ── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 500px; height: 500px; background: var(--accent); top: -120px; left: -120px; }
+    .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: -100px; right: -100px; }
+
+    /* ── Layout ── */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1rem 4rem;
+      gap: 2rem;
+    }
+
+    /* ── Header ── */
+    header { text-align: center; }
+    .badge-tag {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 0.25rem 0.9rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Card ── */
+    .card-main {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      width: 100%;
+      max-width: 460px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 48px rgba(124,106,255,.12), 0 2px 8px rgba(0,0,0,.4);
+    }
+
+    /* ── Webcam area ── */
+    #webcam-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0e0e18;
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 4px);
+      overflow: hidden;
+      width: 100%;
+      aspect-ratio: 1;
+      position: relative;
+      transition: border-color .3s;
+    }
+    #webcam-container.active { border-color: var(--accent); }
+    #webcam-container canvas { width: 100% !important; height: 100% !important; object-fit: cover; display: block; }
+
+    .cam-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--muted);
+    }
+    .cam-icon {
+      width: 56px; height: 56px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+    }
+    .cam-placeholder p { font-family: 'DM Mono', monospace; font-size: 0.72rem; text-align: center; }
+
+    /* ── Start button ── */
+    .btn-start {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      margin-top: 1.25rem;
+      border: none;
+      border-radius: calc(var(--radius) - 4px);
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all .25s ease;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-start::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background .2s;
+    }
+    .btn-start:hover::after { background: rgba(255,255,255,0.08); }
+    .btn-start:active { transform: scale(0.98); }
+    .btn-start:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-start .btn-icon { font-size: 1.1rem; transition: transform .3s; }
+    .btn-start:hover .btn-icon { transform: scale(1.2); }
+
+    /* Loading pulse on button */
+    .btn-start.loading .btn-icon { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Labels / progress bars ── */
+    #label-container { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .label-item { display: flex; flex-direction: column; gap: 0.35rem; }
+
+    .label-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .label-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70%;
+    }
+    .label-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      width: 0%;
+      transition: width .35s cubic-bezier(.4,0,.2,1), background .35s;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+    .bar-fill.high  { background: linear-gradient(90deg, var(--success), var(--accent)); }
+    .bar-fill.low   { background: var(--border); }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 1;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--muted);
+      padding-bottom: 1.5rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── Status dot ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border);
+      transition: background .3s;
+    }
+    .dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="wrapper">
+
+  <!-- Header -->
+  <header>
+    <div class="badge-tag">Teachable Machine</div>
+    <h1>João Pedro<br>Belmiro</h1>
+    <p class="subtitle">// image classification · tensorflow.js</p>
+  </header>
+
+  <!-- Main card -->
+  <div class="card-main">
+
+    <!-- Status -->
+    <div class="status-row">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">aguardando inicialização</span>
+    </div>
+
+    <!-- Webcam -->
+    <div id="webcam-container">
+      <div class="cam-placeholder" id="cam-placeholder">
+        <div class="cam-icon">📷</div>
+        <p>Clique em "Ativar Câmera"<br>para iniciar o modelo</p>
+      </div>
+    </div>
+
+    <!-- Button -->
+    <button class="btn-start" id="btn-start" onclick="init()">
+      <span class="btn-icon">🎥</span>
+      <span id="btn-label">Ativar Câmera</span>
+    </button>
+
+    <!-- Labels -->
+    <div id="label-container"></div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    Powered by <a href="https://teachablemachine.withgoogle.com/" target="_blank">Teachable Machine</a>
+    &amp; <a href="https://www.tensorflow.org/js" target="_blank">TensorFlow.js</a>
+  </footer>
+
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<script>
+  const URL = "https://teachablemachine.withgoogle.com/models/C-KYYffzF/";
+  let model, webcam, labelContainer, maxPredictions;
+  let initialized = false;
+
+  const btn        = document.getElementById('btn-start');
+  const btnLabel   = document.getElementById('btn-label');
+  const btnIcon    = document.querySelector('.btn-icon');
+  const statusDot  = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const placeholder = document.getElementById('cam-placeholder');
+  const webcamCont  = document.getElementById('webcam-container');
+  labelContainer    = document.getElementById('label-container');
+
+  function setStatus(msg, active = false) {
+    statusText.textContent = msg;
+    statusDot.classList.toggle('active', active);
+  }
+
+  async function init() {
+    if (initialized) return;
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btnIcon.textContent = '⏳';
+    btnLabel.textContent = 'Carregando modelo…';
+    setStatus('carregando modelo de IA…');
+
+    try {
+      const modelURL    = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      setStatus('solicitando acesso à câmera…');
+      btnLabel.textContent = 'Acessando câmera…';
+
+      const flip = true;
+      webcam = new tmImage.Webcam(400, 400, flip);
+      await webcam.setup();
+      await webcam.play();
+
+      // Remove placeholder, add canvas
+      placeholder.style.display = 'none';
+      webcamCont.appendChild(webcam.canvas);
+      webcamCont.classList.add('active');
+
+      // Build label bars
+      labelContainer.innerHTML = '';
+      for (let i = 0; i < maxPredictions; i++) {
+        const item = document.createElement('div');
+        item.className = 'label-item';
+        item.innerHTML = `
+          <div class="label-header">
+            <span class="label-name" id="name-${i}">—</span>
+            <span class="label-pct" id="pct-${i}">0%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" id="bar-${i}"></div>
+          </div>`;
+        labelContainer.appendChild(item);
+      }
+
+      initialized = true;
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.style.background = '#1f1f30';
+      btn.style.color = 'var(--muted)';
+      btn.style.cursor = 'default';
+      btn.onclick = null;
+      btnIcon.textContent = '✅';
+      btnLabel.textContent = 'Câmera ativa';
+      setStatus('modelo ativo · classificando…', true);
+
+      window.requestAnimationFrame(loop);
+
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btnIcon.textContent = '🎥';
+      btnLabel.textContent = 'Tentar novamente';
+      setStatus('erro ao inicializar. Tente novamente.');
+    }
+  }
+
+  async function loop() {
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    for (let i = 0; i < maxPredictions; i++) {
+      const p   = prediction[i];
+      const pct = (p.probability * 100).toFixed(1);
+      const val = p.probability * 100;
+
+      document.getElementById(`name-${i}`).textContent = p.className;
+      document.getElementById(`pct-${i}`).textContent  = pct + '%';
+
+      const bar = document.getElementById(`bar-${i}`);
+      bar.style.width = val + '%';
+      bar.className = 'bar-fill' + (val >= 60 ? ' high' : val < 10 ? ' low' : '');
+    }
+  }
+</script>
+</body>
+</html>
