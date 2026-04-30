@@ -3,7 +3,31 @@ import math
 
 
 def is_prime(n):
-    """Retorna True se n for primo, False caso contrario."""
+    """Verifica se um número é primo.
+
+    Determina se o número inteiro fornecido é primo usando o algoritmo
+    de trial division otimizado com salto de 6.
+
+    Args:
+        n: O número inteiro a ser verificado. Deve ser um inteiro maior
+            ou igual a 2.
+
+    Returns:
+        bool: True se o número for primo, False caso contrário.
+
+    Raises:
+        TypeError: Se n for um booleano.
+        ValueError: Não é levantada explicitamente, mas a função
+            retorna False para valores menores que 2.
+
+    Examples:
+        >>> is_prime(7)
+        True
+        >>> is_prime(4)
+        False
+        >>> is_prime(1)
+        False
+    """
     if not isinstance(n, int) or isinstance(n, bool) or n < 2:
         return False
     if n in (2, 3):
