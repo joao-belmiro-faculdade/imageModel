@@ -1,6 +1,15 @@
 def compute_statistics(values):
-    """Calculate total, average, maximum, and minimum for a list of numbers."""
-    if not values:
+    """Calcula estatísticas de uma lista de números.
+
+    Args:
+        values: Lista de números.
+
+    Returns:
+        Tupla com (total, média, máximo, mínimo).
+
+    Raises:
+        ValueError: Se a lista estiver vazia.
+    """
         raise ValueError("The list of values must not be empty.")
 
     total = sum(values)
